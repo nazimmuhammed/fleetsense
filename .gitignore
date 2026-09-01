@@ -1,0 +1,12 @@
+venv/
+.env
+__pycache__/
+*.pyc
+*.pkl
+*.pt
+*.zip
+*.npy
+*.db
+*.faiss.index
+node_modules/
+.vscode/

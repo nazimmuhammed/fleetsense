@@ -1,0 +1,52 @@
+"""
+FleetSense - Maintenance Knowledge Base
+===========================================
+A curated knowledge base of turbofan engine maintenance concepts, grounded
+in real, publicly documented aviation maintenance practices (not
+proprietary manuals, which are not publicly available - same honest
+limitation as GridShield's grid topology).
+"""
+
+MAINTENANCE_DOCS = [
+    {
+        "id": "doc_001",
+        "title": "Understanding Remaining Useful Life (RUL) Alerts",
+        "content": "When an engine's predicted RUL drops below 30 cycles, this indicates the model estimates fewer than 30 operational cycles remain before a likely failure condition. This threshold is derived from historical degradation patterns in the training fleet. A low RUL combined with high prediction uncertainty (wide confidence interval) suggests the engine may be exhibiting an atypical degradation pattern not well represented in training data, warranting closer manual inspection rather than relying solely on the automated prediction."
+    },
+    {
+        "id": "doc_002",
+        "title": "Sensor Anomaly Interpretation",
+        "content": "Reconstruction error from the anomaly detection system reflects how much a given sensor reading pattern deviates from healthy baseline behavior. Elevated reconstruction error without a corresponding drop in predicted RUL may indicate a sensor calibration issue rather than genuine engine degradation. Cross-reference anomaly flags with recent sensor calibration logs before scheduling unplanned maintenance."
+    },
+    {
+        "id": "doc_003",
+        "title": "Common Turbofan Degradation Modes",
+        "content": "Turbofan engines commonly degrade through several mechanisms: compressor blade erosion (gradual efficiency loss, typically shows as slowly rising exhaust gas temperature), turbine blade thermal fatigue (can cause sudden performance shifts), bearing wear (associated with vibration sensor increases), and fuel system fouling (shows as fuel flow sensor drift). Each mode has a characteristic sensor signature that experienced technicians can cross-reference against the model's flagged sensors."
+    },
+    {
+        "id": "doc_004",
+        "title": "Prioritizing Multiple Flagged Engines",
+        "content": "When multiple engines are flagged simultaneously, prioritization should consider three factors: predicted RUL (lower is more urgent), prediction uncertainty (higher uncertainty warrants earlier inspection to resolve ambiguity), and anomaly detector agreement (engines flagged by both the RUL model and the independent anomaly detector represent higher-confidence risk cases than those flagged by only one system)."
+    },
+    {
+        "id": "doc_005",
+        "title": "Scheduling Constraints and Technician Allocation",
+        "content": "Technician scheduling must balance urgency against capacity. Servicing an engine with RUL above 50 cycles when a technician resource could instead address an engine with RUL below 20 cycles represents inefficient resource allocation and increases fleet-wide failure risk. The scheduling system is optimized to minimize this kind of misallocation while respecting hard technician capacity constraints per time period."
+    },
+    {
+        "id": "doc_006",
+        "title": "False Positive Management",
+        "content": "No prediction system is perfect; some flagged engines will not actually be at imminent risk (false positives), and some genuine risks may be missed (false negatives). The calibration process (validating that stated confidence intervals match actual outcome frequency) helps quantify this tradeoff. A well-calibrated 95% confidence interval should contain the true RUL approximately 95% of the time across a large enough sample of engines."
+    },
+    {
+        "id": "doc_007",
+        "title": "When to Override the Model's Recommendation",
+        "content": "Technicians should override automated scheduling recommendations when: recent maintenance history indicates a known issue not reflected in current sensor data, an engine has been flagged with unusually high prediction uncertainty (suggesting the model has low confidence), or external factors (upcoming flight schedule, parts availability) make the optimal schedule infeasible. The system is a decision-support tool, not a fully autonomous authority for safety-critical maintenance decisions."
+    },
+]
+
+if __name__ == "__main__":
+    import json
+    with open("data/maintenance_knowledge_base.json", "w") as f:
+        json.dump(MAINTENANCE_DOCS, f, indent=2)
+    print(f"Saved {len(MAINTENANCE_DOCS)} documents to data/maintenance_knowledge_base.json")
