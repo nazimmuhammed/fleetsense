@@ -15,11 +15,18 @@ import joblib
 from train_lstm import RULLSTM, FEATURE_COLS, WINDOW_SIZE, RUL_CAP, DATA_DIR
 
 
+_cached_model = None
+_cached_scaler = None
+
+
 def load_model_and_scaler():
-    model = RULLSTM(n_features=len(FEATURE_COLS))
-    model.load_state_dict(torch.load(f"{DATA_DIR}/rul_lstm_model.pt"))
-    scaler = joblib.load(f"{DATA_DIR}/scaler.pkl")
-    return model, scaler
+    global _cached_model, _cached_scaler
+    if _cached_model is None:
+        _cached_model = RULLSTM(n_features=len(FEATURE_COLS))
+        _cached_model.load_state_dict(torch.load(f"{DATA_DIR}/rul_lstm_model.pt"))
+    if _cached_scaler is None:
+        _cached_scaler = joblib.load(f"{DATA_DIR}/scaler.pkl")
+    return _cached_model, _cached_scaler
 
 
 def predict_with_uncertainty(model, x, n_samples=50):

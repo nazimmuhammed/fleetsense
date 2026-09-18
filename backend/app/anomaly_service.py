@@ -15,14 +15,22 @@ import joblib
 from train_lstm import FEATURE_COLS, DATA_DIR
 from train_autoencoder import Autoencoder
 
+_cached_model = None
+_cached_threshold = None
+_cached_scaler = None
+
 
 def load_autoencoder():
-    model = Autoencoder(n_features=len(FEATURE_COLS))
-    model.load_state_dict(torch.load(f"{DATA_DIR}/autoencoder.pt", weights_only=True))
-    model.eval()
-    threshold = np.load(f"{DATA_DIR}/anomaly_threshold.npy")
-    scaler = joblib.load(f"{DATA_DIR}/scaler.pkl")
-    return model, threshold, scaler
+    global _cached_model, _cached_threshold, _cached_scaler
+    if _cached_model is None:
+        _cached_model = Autoencoder(n_features=len(FEATURE_COLS))
+        _cached_model.load_state_dict(torch.load(f"{DATA_DIR}/autoencoder.pt", weights_only=True))
+        _cached_model.eval()
+    if _cached_threshold is None:
+        _cached_threshold = np.load(f"{DATA_DIR}/anomaly_threshold.npy")
+    if _cached_scaler is None:
+        _cached_scaler = joblib.load(f"{DATA_DIR}/scaler.pkl")
+    return _cached_model, _cached_threshold, _cached_scaler
 
 
 def get_anomaly_status(engine_id: int) -> dict:
