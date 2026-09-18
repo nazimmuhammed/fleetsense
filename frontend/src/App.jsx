@@ -6,7 +6,7 @@ import MiraChat from './MiraChat'
 import FleetDrawer from './FleetDrawer'
 import LiveSimulator from './LiveSimulator'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 const FLEET_SIZE = 10
 const POLL_INTERVAL_MS = 15000
 

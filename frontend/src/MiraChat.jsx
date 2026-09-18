@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import MiraAvatar from './MiraAvatar'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
 function MiraChat() {
   const [open, setOpen] = useState(false)
@@ -32,12 +33,15 @@ function MiraChat() {
 
   return (
     <>
-      <button className="mira-fab" onClick={() => setOpen((o) => !o)}>
-        {open ? '✕' : '💬'}
+            <button className="mira-fab" onClick={() => setOpen((o) => !o)}>
+        {open ? '✕' : <MiraAvatar talking={asking} size={38} />}
       </button>
       {open && (
         <div className="mira-panel">
-          <div className="mira-panel-header">MIRA — Maintenance Assistant</div>
+                    <div className="mira-panel-header">
+            <MiraAvatar talking={asking} size={28} />
+            <span>MIRA — Maintenance Assistant</span>
+          </div>
           <div className="mira-panel-log">
             {messages.map((m, i) => (
               <div key={i} className={`mira-msg mira-msg-${m.role}`}>{m.content}</div>
@@ -52,6 +56,7 @@ function MiraChat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
             />
+            
             <button className="mira-panel-send" onClick={send} disabled={asking}>Send</button>
           </div>
         </div>

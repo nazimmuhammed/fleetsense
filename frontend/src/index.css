@@ -677,3 +677,39 @@ html, body, #root {
   color: var(--color-warn);
   border: 1px solid rgba(232,163,61,0.25);
 }
+.mira-avatar-svg {
+  display: block;
+}
+.mira-eye {
+  animation: mira-blink 4s ease-in-out infinite;
+  transform-origin: center;
+}
+.mira-eye-right {
+  animation-delay: 0.05s;
+}
+@keyframes mira-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+.mira-signal-dot {
+  animation: mira-signal-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mira-signal-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.mira-mouth-talking {
+  animation: mira-talk 0.35s ease-in-out infinite;
+}
+@keyframes mira-talk {
+  0%, 100% { ry: 4; }
+  50% { ry: 1.5; }
+}
+.mira-avatar-head {
+  transition: filter 0.3s ease;
+}
+.mira-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
