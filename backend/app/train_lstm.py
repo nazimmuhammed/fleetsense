@@ -24,8 +24,8 @@ setting_names = ['setting_1', 'setting_2', 'setting_3']
 sensor_names = [f's_{i}' for i in range(1, 22)]
 CONSTANT_SENSORS = ['s_1', 's_5', 's_10', 's_16', 's_18', 's_19']  # confirmed via your EDA
 FEATURE_COLS = setting_names + [s for s in sensor_names if s not in CONSTANT_SENSORS]
-
-DATA_DIR = "data"
+import os
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 
 
 def load_and_prepare():

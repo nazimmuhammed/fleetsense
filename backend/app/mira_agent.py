@@ -20,9 +20,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-DATA_DIR = "data"
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 DB_PATH = os.path.join(DATA_DIR, "fleetsense.db")
-
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -94,7 +93,10 @@ def tool_get_engine_status(engine_id: int) -> dict:
         "confidence_interval_95": [round(result['lower_95'], 1), round(result['upper_95'], 1)],
         "actual_rul_if_known": int(actual_rul) if actual_rul is not None else None,
     }
-
+def tool_get_anomaly_status(engine_id: int) -> dict:
+    """Independent unsupervised anomaly check via autoencoder reconstruction error."""
+    from anomaly_service import get_anomaly_status
+    return get_anomaly_status(engine_id)
 
 def tool_query_maintenance_docs(question: str) -> dict:
     """RAG retrieval over the maintenance knowledge base."""
@@ -147,12 +149,26 @@ TOOLS_SCHEMA = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
+        {
+        "type": "function",
+        "function": {
+            "name": "get_anomaly_status",
+            "description": "Independent unsupervised anomaly check for an engine using an autoencoder trained only on healthy data. A separate signal from the LSTM's RUL prediction - use this to cross-check whether both models agree.",
+            "parameters": {
+                "type": "object",
+                "properties": {"engine_id": {"type": "integer", "description": "Engine ID, 1-100"}},
+                "required": ["engine_id"],
+            },
+        },
+    },
 ]
 
 TOOL_FUNCTIONS = {
     "get_engine_status": tool_get_engine_status,
     "query_maintenance_docs": tool_query_maintenance_docs,
     "list_critical_engines": tool_list_critical_engines,
+    "get_anomaly_status": tool_get_anomaly_status,
+
 }
 
 SYSTEM_PROMPT = """You are Mira, an AI maintenance assistant for FleetSense, a fleet health monitoring system for turbofan engines.
