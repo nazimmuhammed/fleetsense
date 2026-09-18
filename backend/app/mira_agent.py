@@ -17,11 +17,30 @@ from datetime import datetime
 from groq import Groq
 from dotenv import load_dotenv
 
+import pandas as pd
+import torch
+from predict_with_uncertainty import load_model_and_scaler, predict_with_uncertainty
+from train_lstm import FEATURE_COLS, WINDOW_SIZE
+
 load_dotenv()
 
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 DB_PATH = os.path.join(DATA_DIR, "fleetsense.db")
+
+# ---------- LOAD MODEL, SCALER, DATA ONCE AT STARTUP ----------
+# Previously this was loaded inside tool_get_engine_status() and reran
+# on every single request. Under repeated polling (10 engines every 15s)
+# that caused memory to climb until the process got OOM-killed on Render's
+# free tier. Loading once here fixes that.
+_MODEL, _SCALER = load_model_and_scaler()
+_TEST_DF = pd.read_csv(
+    f"{DATA_DIR}/test_FD001.txt", sep=r'\s+', header=None,
+    names=['unit_nr', 'time_cycles', 'setting_1', 'setting_2', 'setting_3']
+    + [f's_{i}' for i in range(1, 22)]
+)
+_RUL_DF = pd.read_csv(f"{DATA_DIR}/RUL_FD001.txt", sep=r'\s+', header=None, names=['RUL'])
+
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -63,28 +82,19 @@ def get_history(session_id, limit=20):
 
 def tool_get_engine_status(engine_id: int) -> dict:
     """Pulls a real LSTM prediction with uncertainty for a specific test engine."""
-    from predict_with_uncertainty import load_model_and_scaler, predict_with_uncertainty
-    from train_lstm import FEATURE_COLS, WINDOW_SIZE
-    import pandas as pd
-    import torch
-
-    test = pd.read_csv(f"{DATA_DIR}/test_FD001.txt", sep=r'\s+', header=None,
-                        names=['unit_nr', 'time_cycles', 'setting_1', 'setting_2', 'setting_3']
-                        + [f's_{i}' for i in range(1, 22)])
-    rul_test = pd.read_csv(f"{DATA_DIR}/RUL_FD001.txt", sep=r'\s+', header=None, names=['RUL'])
-
-    model, scaler = load_model_and_scaler()
-    engine_data = test[test['unit_nr'] == engine_id].sort_values('time_cycles')
+    engine_data = _TEST_DF[_TEST_DF['unit_nr'] == engine_id].sort_values('time_cycles')
     if len(engine_data) < WINDOW_SIZE:
         return {"error": f"Engine {engine_id} has insufficient cycle history"}
 
     engine_data_scaled = engine_data.copy()
-    engine_data_scaled[FEATURE_COLS] = scaler.transform(engine_data[FEATURE_COLS])
+    engine_data_scaled[FEATURE_COLS] = _SCALER.transform(engine_data[FEATURE_COLS])
     last_window = engine_data_scaled[FEATURE_COLS].values[-WINDOW_SIZE:]
-    x = torch.tensor(last_window, dtype=torch.float32).unsqueeze(0)
 
-    result = predict_with_uncertainty(model, x)
-    actual_rul = rul_test.iloc[engine_id - 1]['RUL'] if engine_id <= len(rul_test) else None
+    with torch.no_grad():
+        x = torch.tensor(last_window, dtype=torch.float32).unsqueeze(0)
+        result = predict_with_uncertainty(_MODEL, x)
+
+    actual_rul = _RUL_DF.iloc[engine_id - 1]['RUL'] if engine_id <= len(_RUL_DF) else None
 
     return {
         "engine_id": engine_id,
@@ -93,10 +103,13 @@ def tool_get_engine_status(engine_id: int) -> dict:
         "confidence_interval_95": [round(result['lower_95'], 1), round(result['upper_95'], 1)],
         "actual_rul_if_known": int(actual_rul) if actual_rul is not None else None,
     }
+
+
 def tool_get_anomaly_status(engine_id: int) -> dict:
     """Independent unsupervised anomaly check via autoencoder reconstruction error."""
     from anomaly_service import get_anomaly_status
     return get_anomaly_status(engine_id)
+
 
 def tool_query_maintenance_docs(question: str) -> dict:
     """RAG retrieval over the maintenance knowledge base."""
@@ -107,7 +120,6 @@ def tool_query_maintenance_docs(question: str) -> dict:
 
 def tool_list_critical_engines() -> dict:
     """Returns known critical engines from calibration results if available."""
-    import pandas as pd
     try:
         df = pd.read_csv(f"{DATA_DIR}/calibration_results.csv")
         worst = df.nlargest(5, 'abs_error')[['engine_id', 'predicted', 'actual']].to_dict('records')
@@ -149,7 +161,7 @@ TOOLS_SCHEMA = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
-        {
+    {
         "type": "function",
         "function": {
             "name": "get_anomaly_status",
@@ -168,7 +180,6 @@ TOOL_FUNCTIONS = {
     "query_maintenance_docs": tool_query_maintenance_docs,
     "list_critical_engines": tool_list_critical_engines,
     "get_anomaly_status": tool_get_anomaly_status,
-
 }
 
 SYSTEM_PROMPT = """You are Mira, an AI maintenance assistant for FleetSense, a fleet health monitoring system for turbofan engines.
