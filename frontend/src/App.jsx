@@ -150,7 +150,14 @@ function App() {
           <span className="live-dot"></span>
           HANGAR FLOOR — LIVE FLEET STATUS (auto-refresh every 15s)
         </div>
-        {loading && <div className="loading-text">Loading fleet status...</div>}
+        {loading && (
+  <div className="loading-text">
+    Loading fleet status...
+    <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.6 }}>
+      (First load can take up to a minute — the backend is waking up from sleep)
+    </div>
+  </div>
+)}
         {!loading && engines.length === 0 && <div className="loading-text">No engine data available — check backend.</div>}
         <div className="gauge-grid">
           {engines.map((e, i) => (
